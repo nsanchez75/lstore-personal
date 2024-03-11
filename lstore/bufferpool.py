@@ -42,6 +42,10 @@ class Bufferpool:
         self.__access_frame(base_page_path)
         self.frames[base_page_path].insert_record(record)
 
+    def get_record_entry(self, id:RID, page_path:str, column_index:int)->int:
+        self.__access_frame(page_path)
+        return self.frames[page_path].get_record_entry(id, column_index)
+
     def get_schema_encoding(self, rid:RID, base_page_path:str)->bitarray:
         self.__access_frame(base_page_path)
         return self.frames[base_page_path].get_schema_encoding(rid)
@@ -57,10 +61,6 @@ class Bufferpool:
     def set_indirection_tid(self, id:RID, tid:TID, base_page_path:str)->None:
         self.__access_frame(base_page_path)
         return self.frames[base_page_path].set_indirection_tid(id, tid)
-
-    def get_record_entry(self, id:RID, page_path:str, column_index:int)->int:
-        self.__access_frame(page_path)
-        return self.frames[page_path].get_record_entry(id, column_index)
 
 
 class Frame:

@@ -114,8 +114,7 @@ class Table:
         assert len(rids) == 1
         rid = rids.pop()
         self.__access_page_range(rid.get_page_range_index())
-        new_record = Record(rid, self.key_index, columns)
-        self.page_ranges[rid.get_page_range_index()].update_record(new_record)
+        self.page_ranges[rid.get_page_range_index()].update_record(rid, columns)
 
     def delete_record(self, primary_key)->None:
         # TODO
