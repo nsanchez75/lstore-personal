@@ -253,12 +253,15 @@ class Index:
         Returns the RIDs of all records with values in a specified column
         between "begin" and "end" (bounds-inclusive).
         """
+        if not column_index in self.indices:
+            raise KeyError
         return self.indices[column_index].get_ranged_entry(begin, end)
 
-    def update_entry(
-        self, old_entry_value, new_entry_value, rid: int, column_index: int
-    ) -> None:
+    def update(
+        self, old_entries:tuple, new_entries:tuple, rid: int)->None:
         """
         Updates an RID-associated entry value.
         """
-        self.indices[column_index].update_value(old_entry_value, new_entry_value, rid)
+        for i in range(len(new_entries)):
+            if new_entries[i] != None and i in self.indices:
+                self.indices[i].update_value(old_entries[i], new_entries[i], rid)

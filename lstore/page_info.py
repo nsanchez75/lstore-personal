@@ -121,17 +121,16 @@ class Page_Range:
                 columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
         return tuple(columns)
 
-    def update_record(self, rid:RID, new_columns:tuple)->None:
+    def update_record(self, rid:RID, old_columns:tuple, new_columns:tuple)->None:
         self.__access_base_page(rid.get_base_page_index())
         tid = self.base_pages[rid.get_base_page_index()].get_indirection_tid(rid)
 
         # convert columns to lists
-        old_columns = list(self.get_record_columns(rid))
+        old_columns = list(old_columns)
         new_columns = list(new_columns)
 
         # adjust schema encoding
         schema_encoding = self.base_pages[rid.get_base_page_index()].get_schema_encoding(rid)
-        assert len(old_columns) == len(new_columns)
         for i in range(len(old_columns)):
             if new_columns[i] != None and old_columns[i] != new_columns[i]:
                 schema_encoding[i] = True
@@ -145,11 +144,9 @@ class Page_Range:
         self.__access_tail_page(new_tid.get_tail_page_index())
 
         # set indirection in base page if applicable
-        if tid == -1:
-            self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
+        if tid == -1: self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
         # else set indirection in tail page
-        else:
-            self.tail_pages[tid.get_tail_page_index()].set_indirection_tid(tid, new_tid)
+        else:         self.tail_pages[tid.get_tail_page_index()].set_indirection_tid(tid, new_tid)
 
         # write new data to new TID
         key_index = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["key_index"]

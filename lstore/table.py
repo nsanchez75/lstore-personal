@@ -109,13 +109,24 @@ class Table:
             rsum += columns[aggregate_column_index]
         return rsum
 
-    def update_record(self, primary_key, columns:tuple)->None:
+    def update_record(self, primary_key, new_columns:tuple)->None:
+        # identify RID
+        rids = self.index.locate(primary_key, self.key_index)
+        assert len(rids) == 1
+        rid = rids.pop()
+
+        # update entry values associated to RID in index
+        old_columns = self.select_record(primary_key, self.key_index)[0].get_columns()
+        assert len(old_columns) == len(new_columns)
+        self.index.update(old_columns, new_columns, rid)
+
+        # update record in disk
+        self.__access_page_range(rid.get_page_range_index())
+        self.page_ranges[rid.get_page_range_index()].update_record(rid, old_columns, new_columns)
+
+    def delete_record(self, primary_key)->None:
         rids = self.index.locate(primary_key, self.key_index)
         assert len(rids) == 1
         rid = rids.pop()
         self.__access_page_range(rid.get_page_range_index())
-        self.page_ranges[rid.get_page_range_index()].update_record(rid, columns)
-
-    def delete_record(self, primary_key)->None:
-        # TODO
-        pass
+        self.page_ranges[rid.get_page_range_index()].delete_record(rid)
