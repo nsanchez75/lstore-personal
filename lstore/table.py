@@ -26,8 +26,8 @@ class Table:
             "num_records": self.num_records,
         }
         Disk.write_to_path_metadata(self.table_path, metadata)
-        for page_range in self.page_ranges.values():
-            del page_range
+        del self.page_ranges
+        self.page_ranges = None
 
     def __get_page_ranges(self)->tuple[list[str],int]:
         page_range_dirs = Disk.list_directories_in_path(self.table_path)
@@ -44,6 +44,8 @@ class Table:
             metadata = Disk.read_from_path_metadata(page_range_path)
             self.page_ranges[page_range_index] = Page_Range(
                 metadata["page_range_path"],
+                metadata["page_range_index"],
+                metadata["latest_tid"],
                 metadata["tps_index"],
             )
 
@@ -90,21 +92,21 @@ class Table:
         self.__access_page_range(record.get_page_range_index())
         self.page_ranges[record.get_page_range_index()].insert_record(record)
 
-    def select_record(self, search_key, search_key_index:int)->list[Record]:
+    def select_record(self, search_key, search_key_index:int, rollback_version:int=0)->list[Record]:
         rlist = list()
         rids = self.index.locate(search_key, search_key_index)
         for rid in rids:
             self.__access_page_range(rid.get_page_range_index())
-            columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid)
+            columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
             rlist.append(Record(rid, self.key_index, columns))
         return rlist
 
-    def sum_records(self, start_range, end_range, aggregate_column_index:int)->int:
+    def sum_records(self, start_range, end_range, aggregate_column_index:int, rollback_version:int=0)->int:
         rsum = 0
         rids = self.index.locate_range(start_range, end_range, self.key_index)
         for rid in rids:
             self.__access_page_range(rid.get_page_range_index())
-            columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid)
+            columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
             rsum += columns[aggregate_column_index]
         return rsum
 

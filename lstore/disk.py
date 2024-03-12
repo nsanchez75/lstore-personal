@@ -13,7 +13,7 @@ class Disk:
     except ValueError: pass
     try: rlist.remove("index")
     except ValueError: pass
-    [os.path.join(path, _) for _ in rlist]
+    rlist = [os.path.join(path, _) for _ in rlist]
     return rlist
 
   def write_to_path_metadata(path:str, metadata:dict)->None:

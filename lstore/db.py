@@ -9,11 +9,16 @@ class Database():
         self.tables:dict[str,Table] = dict()
         self.db_path = None
 
-    def __load_database(self)->None:
-        for table_path in os.listdir(self.db_path):
-            table_path = os.path.join(self.db_path, table_path)
+    def __get_tables(self)->tuple[list[str],int]:
+        table_dirs = Disk.list_directories_in_path(self.db_path)
+        return (table_dirs, len(table_dirs))
+
+    def __load_tables(self)->None:
+        table_paths, num_tables = self.__get_tables()
+        for table_path in table_paths:
+            table_name = os.path.basename(table_path)
             metadata = Disk.read_from_path_metadata(table_path)
-            self.tables[table_path] = Table(
+            self.tables[table_name] = Table(
                 metadata["table_path"],
                 metadata["num_columns"],
                 metadata["key_index"],
@@ -26,14 +31,13 @@ class Database():
             Disk.create_path_directory(path)
         except FileExistsError:
             print(f"Database at path {path} already exists.")
-            self.__load_database()
+            self.__load_tables()
         else:
             print(f"Database at path {path} created.")
 
     def close(self):
-        for table_path in self.tables.keys():
-            del self.tables[table_path]
-        self.db_path = None
+        del self.tables
+        self.tables = None
 
     def create_table(self, name:str, num_columns:int, key_index:int)->Table:
         """

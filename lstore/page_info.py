@@ -29,6 +29,10 @@ class Page_Range:
         metadata = Disk.read_from_path_metadata(self.page_range_path)
         metadata["latest_tid"] = self.latest_tid
         Disk.write_to_path_metadata(self.page_range_path, metadata)
+        del self.base_pages
+        self.base_pages = None
+        del self.tail_pages
+        self.tail_pages = None
 
     def __get_pages(self, page_type:Page_Type)->tuple[list[str],int]:
         page_dirs = Disk.list_directories_in_path(self.page_range_path)
@@ -51,7 +55,7 @@ class Page_Range:
         page_paths, num_pages = self.__get_pages(Page_Type.ANY)
         if not num_pages: return
         for page_path in page_paths:
-            page_index = int(os.path.basename(page_index)[:3])
+            page_index = int(os.path.basename(page_path)[2:])
             metadata = Disk.read_from_path_metadata(page_path)
             match os.path.basename(page_path)[:2]:
                 case "BP": self.base_pages[page_index] = Base_Page(
@@ -107,17 +111,16 @@ class Page_Range:
         self.__access_base_page(record.get_base_page_index())
         self.base_pages[record.get_base_page_index()].insert_record(record)
 
-    def get_record_columns(self, rid:RID)->tuple:
-        self.__access_base_page(rid.get_base_page_index())
+    def get_record_columns(self, rid:RID, rollback_version:int)->tuple:
         columns = list()
-        schema_encoding = self.base_pages[rid.get_base_page_index()].get_schema_encoding(rid)
         tid = self.base_pages[rid.get_base_page_index()].get_indirection_tid(rid)
+        schema_encoding = self.base_pages[rid.get_base_page_index()].get_schema_encoding(rid)
+        while rollback_version < 0:
+            tid = self.tail_pages[tid.get_tail_page_index()].get_indirection_tid(tid)
+            rollback_version += 1
         for i, bit in enumerate(schema_encoding):
-            if not bit:
-                columns.append(self.base_pages[rid.get_base_page_index()].select_record(rid, i))
-            else:
-                self.__access_tail_page(tid.get_tail_page_index())
-                columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
+            if not bit: columns.append(self.base_pages[rid.get_base_page_index()].select_record(rid, i))
+            else:       columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
         return tuple(columns)
 
     def update_record(self, rid:RID, old_columns:tuple, new_columns:tuple)->None:
@@ -197,5 +200,8 @@ class Tail_Page:
     def select_record(self, tid:TID, column_index:int)->int:
         return BUFFERPOOL.get_record_entry(tid, self.tail_page_path, column_index)
 
+    def get_indirection_tid(self, tid:TID)->TID:
+        return BUFFERPOOL.get_indirection_tid(tid, self.tail_page_path)
+
     def set_indirection_tid(self, tid:TID, indirection_tid:TID)->None:
-        return BUFFERPOOL.set_indirection_tid(tid, indirection_tid, self.tail_page_path)
+        BUFFERPOOL.set_indirection_tid(tid, indirection_tid, self.tail_page_path)

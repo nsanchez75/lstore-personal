@@ -54,9 +54,9 @@ class Bufferpool:
         self.__access_frame(base_page_path)
         self.frames[base_page_path].set_schema_encoding(rid, schema_encoding)
 
-    def get_indirection_tid(self, rid:RID, base_page_path:str)->TID:
-        self.__access_frame(base_page_path)
-        return self.frames[base_page_path].get_indirection_tid(rid)
+    def get_indirection_tid(self, id:RID, page_path:str)->TID:
+        self.__access_frame(page_path)
+        return self.frames[page_path].get_indirection_tid(id)
 
     def set_indirection_tid(self, id:RID, tid:TID, page_path:str)->None:
         self.__access_frame(page_path)
@@ -106,7 +106,6 @@ class Frame:
             self.__create_physical_pages()
         physical_page_paths = Disk.list_directories_in_path(self.page_path)
         for physical_page_path in physical_page_paths:
-            physical_page_path = os.path.join(self.page_path, physical_page_path)
             if not os.path.isfile(physical_page_path): raise ValueError
             with open(physical_page_path, 'rb') as f:
                 data = bytearray(f.read())
