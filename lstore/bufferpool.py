@@ -58,9 +58,13 @@ class Bufferpool:
         self.__access_frame(base_page_path)
         return self.frames[base_page_path].get_indirection_tid(rid)
 
-    def set_indirection_tid(self, id:RID, tid:TID, base_page_path:str)->None:
+    def set_indirection_tid(self, id:RID, tid:TID, page_path:str)->None:
+        self.__access_frame(page_path)
+        self.frames[page_path].set_indirection_tid(id, tid)
+
+    def delete_record(self, rid:RID, base_page_path:str)->None:
         self.__access_frame(base_page_path)
-        return self.frames[base_page_path].set_indirection_tid(id, tid)
+        self.frames[base_page_path].delete_record(rid)
 
 
 class Frame:
@@ -162,6 +166,10 @@ class Frame:
     @__pin_frame_decorator
     def get_record_entry(self, id:RID, column_index:int)->int:
         return self.physical_pages[column_index+Config.NUM_METADATA_COLUMNS].read_record_info_from_data(int(id))
+
+    @__pin_frame_decorator
+    def delete_record(self, rid:RID)->None:
+        self.physical_pages[Config.RID_COLUMN].write_record_info_to_data(0, int(rid))
 
 
 class Physical_Page:

@@ -5,11 +5,11 @@ from lstore.table import Table
 
 class Database():
 
-    def __init__(self):
+    def __init__(self)->None:
         self.tables:dict[str,Table] = dict()
         self.db_path = None
 
-    def __load_database(self):
+    def __load_database(self)->None:
         for table_path in os.listdir(self.db_path):
             table_path = os.path.join(self.db_path, table_path)
             metadata = Disk.read_from_path_metadata(table_path)
@@ -35,7 +35,7 @@ class Database():
             del self.tables[table_path]
         self.db_path = None
 
-    def create_table(self, name:str, num_columns:int, key_index:int):
+    def create_table(self, name:str, num_columns:int, key_index:int)->Table:
         """
         Create new table.
 
@@ -59,13 +59,13 @@ class Database():
         table = Table(table_path, num_columns, key_index, 0)
         return table
 
-    def drop_table(self, name:str):
+    def drop_table(self, name:str)->None:
         """
         Delete specified table.
         """
         del self.tables[name]
 
-    def get_table(self, name:str):
+    def get_table(self, name:str)->Table:
         """
         Return table with passed name.
         """

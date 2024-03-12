@@ -1,8 +1,7 @@
 import os
 
-import lstore.config as Config
 from lstore.disk import Disk
-from lstore.record_info import Record, RID
+from lstore.record_info import Record
 from lstore.page_info import Page_Range
 from lstore.index import Index
 
@@ -128,5 +127,11 @@ class Table:
         rids = self.index.locate(primary_key, self.key_index)
         assert len(rids) == 1
         rid = rids.pop()
+
+        # delete record from index
+        columns = self.select_record(primary_key, self.key_index)[0].get_columns()
+        self.index.delete(columns, rid)
+
+        # delete record from disk
         self.__access_page_range(rid.get_page_range_index())
         self.page_ranges[rid.get_page_range_index()].delete_record(rid)

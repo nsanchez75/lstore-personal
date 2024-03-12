@@ -3,7 +3,6 @@ from bitarray import bitarray
 from enum import Enum
 from copy import deepcopy
 
-import lstore.config as Config
 from lstore.disk import Disk
 from lstore.bufferpool import BUFFERPOOL
 from lstore.record_info import Record, RID, TID
@@ -153,6 +152,10 @@ class Page_Range:
         new_record = Record(new_tid, key_index, tuple(old_columns))
         self.tail_pages[new_tid.get_tail_page_index()].insert_record(new_record)
 
+    def delete_record(self, rid:RID)->None:
+        self.__access_base_page(rid.get_base_page_index())
+        self.base_pages[rid.get_base_page_index()].delete_record(rid)
+
 
 class Base_Page:
 
@@ -177,6 +180,9 @@ class Base_Page:
 
     def select_record(self, rid:RID, column_index:int)->int:
         return BUFFERPOOL.get_record_entry(rid, self.base_page_path, column_index)
+
+    def delete_record(self, rid:RID)->None:
+        BUFFERPOOL.delete_record(rid, self.base_page_path)
 
 
 class Tail_Page:
