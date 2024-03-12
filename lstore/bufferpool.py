@@ -104,7 +104,8 @@ class Frame:
         """
         if not len(Disk.list_directories_in_path(self.page_path)):
             self.__create_physical_pages()
-        physical_page_paths = Disk.list_directories_in_path(self.page_path)
+        physical_page_paths:list[str] = Disk.list_directories_in_path(self.page_path)
+        physical_page_paths.sort(key=lambda x: int(x.split('/')[-1].split('.')[0]))
         for physical_page_path in physical_page_paths:
             if not os.path.isfile(physical_page_path): raise ValueError
             with open(physical_page_path, 'rb') as f:

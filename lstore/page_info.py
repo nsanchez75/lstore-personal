@@ -119,8 +119,10 @@ class Page_Range:
             tid = self.tail_pages[tid.get_tail_page_index()].get_indirection_tid(tid)
             rollback_version += 1
         for i, bit in enumerate(schema_encoding):
-            if not bit: columns.append(self.base_pages[rid.get_base_page_index()].select_record(rid, i))
-            else:       columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
+            if not bit or int(tid) == -1:
+                columns.append(self.base_pages[rid.get_base_page_index()].select_record(rid, i))
+            else:
+                columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
         return tuple(columns)
 
     def update_record(self, rid:RID, old_columns:tuple, new_columns:tuple)->None:
@@ -144,15 +146,15 @@ class Page_Range:
         new_tid = TID(deepcopy(self.latest_tid))
         self.__access_tail_page(new_tid.get_tail_page_index())
 
-        # set indirection in base page if applicable
-        if int(tid) == -1: self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
-        # else set indirection in tail page
-        else:              self.tail_pages[tid.get_tail_page_index()].set_indirection_tid(tid, new_tid)
-
         # write new data to new TID
         key_index = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["key_index"]
         new_record = Record(new_tid, key_index, tuple(old_columns))
         self.tail_pages[new_tid.get_tail_page_index()].insert_record(new_record)
+
+        # handle indirection
+        self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
+        if not int(tid) == -1:
+            self.tail_pages[new_tid.get_tail_page_index()].set_indirection_tid(new_tid, tid)
 
     def delete_record(self, rid:RID)->None:
         self.__access_base_page(rid.get_base_page_index())
