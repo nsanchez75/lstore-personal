@@ -142,13 +142,12 @@ class Page_Range:
         # increment number of TIDs in a page range
         self.latest_tid += 1
         new_tid = TID(deepcopy(self.latest_tid))
-        self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
         self.__access_tail_page(new_tid.get_tail_page_index())
 
         # set indirection in base page if applicable
-        if tid == -1: self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
+        if int(tid) == -1: self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
         # else set indirection in tail page
-        else:         self.tail_pages[tid.get_tail_page_index()].set_indirection_tid(tid, new_tid)
+        else:              self.tail_pages[tid.get_tail_page_index()].set_indirection_tid(tid, new_tid)
 
         # write new data to new TID
         key_index = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["key_index"]

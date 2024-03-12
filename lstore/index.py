@@ -208,7 +208,7 @@ class Index:
         
         # add column index values and their respective RIDs to the new tree 
         num_records:int = Disk.read_from_path_metadata(os.path.dirname(self.index_dir_path))["num_records"]
-        for rid in len(1, num_records+1):
+        for rid in range(1, num_records+1):
             rid = RID(rid)
             # get info of rid's base page
             base_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{rid.get_page_range_index()}", f"BP{rid.get_base_page_index()}")
