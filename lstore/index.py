@@ -97,65 +97,6 @@ class Index_Column:
         return rset
 
 
-class Column_Data_Getter:
-
-    def __init__(self, index_dir_path: str, column_index: int) -> None:
-        self.table_dir_path: str = os.path.dirname(index_dir_path)
-        self.column_index: int = column_index
-        self.values: dict[int, set[int]] = dict()
-
-    def __get_page_dir_path(self, rid: RID, page_header: str) -> str:
-        dir_path = os.path.join(
-            self.table_dir_path,
-            f"PR{rid.get_page_range_index()}",
-            f"{page_header}{rid.get_base_page_index()}",
-        )
-        assert os.path.isdir(dir_path)
-        return dir_path
-
-    def __was_column_updated(
-        self, rid: RID, column_index: int, base_page_dir_path: str, num_columns: int
-    ) -> bool:
-        schema_encoding = BUFFERPOOL.get_meta_data(
-            rid, base_page_dir_path, num_columns
-        )[Config.SCHEMA_ENCODING_COLUMN]
-        schema_encoding = schema_encoding.to_bytes(
-            length=Config.DATA_ENTRY_SIZE, byteorder="big"
-        )
-        bits = bitarray()
-        bits.tobytes(schema_encoding)
-        return bits[Config.DATA_ENTRY_SIZE * 8 - (num_columns - column_index) - 1] == 1
-
-    def get_column_data(self) -> dict:
-        values: dict[int, set[int]] = dict()
-        num_records = Disk.read_from_path_metadata(self.table_dir_path)["num_records"]
-        num_columns = Disk.read_from_path_metadata(self.table_dir_path)["num_columns"]
-
-        for rid in range(1, num_records + 1):
-            base_page_dir_path = self.__get_page_dir_path(RID(rid), "BP")
-            record_value = BUFFERPOOL.get_data_from_buffer(
-                RID(rid), base_page_dir_path, num_columns
-            )[self.column_index]
-            tid = BUFFERPOOL.get_meta_data(RID(rid), base_page_dir_path, num_columns)[
-                Config.INDIRECTION_COLUMN
-            ]
-
-            if self.__was_column_updated(
-                RID(rid), self.column_index, base_page_dir_path, num_columns
-            ):
-                tail_page_dir_path = self.__get_page_dir_path(RID(tid), "TP")
-                record_value = BUFFERPOOL.get_data_from_buffer(
-                    RID(tid), tail_page_dir_path, num_columns
-                )[self.column_index]
-
-            if not record_value in values:
-                values[record_value] = {rid}
-            else:
-                values[record_value].add(rid)
-
-        return values
-
-
 class Index:
 
     def __init__(self, table_dir_path:str, num_columns:int, primary_key_index:int) -> None:
@@ -204,8 +145,8 @@ class Index:
         if self.__does_index_filename_exist(column_index): raise FileExistsError
         if self.__is_index_in_indices(column_index): raise KeyError
         self.indices[column_index] = Index_Column(self.__get_column_index_filename(column_index), self.order)
-        
-        # add column index values and their respective RIDs to the new tree 
+
+        # add column index values and their respective RIDs to the new tree
         num_records:int = Disk.read_from_path_metadata(os.path.dirname(self.index_dir_path))["num_records"]
         for rid in range(1, num_records+1):
             rid = RID(rid)
