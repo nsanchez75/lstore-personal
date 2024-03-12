@@ -1,6 +1,5 @@
 import os
 from pickle import loads, dumps
-from copy import deepcopy
 from bplustree import BPlusTree
 from bitarray import bitarray
 

@@ -154,6 +154,7 @@ class Frame:
     def set_schema_encoding(self, rid:RID, schema_encoding:bitarray)->None:
         schema_encoding = int(schema_encoding.to01(), 2)
         self.physical_pages[Config.SCHEMA_ENCODING_COLUMN].write_record_info_to_data(schema_encoding, int(rid))
+        self.__set_dirty_bit()
 
     @__pin_frame_decorator
     def get_indirection_tid(self, rid:RID)->TID:
@@ -162,6 +163,7 @@ class Frame:
     @__pin_frame_decorator
     def set_indirection_tid(self, id:RID, tid:TID)->None:
         self.physical_pages[Config.INDIRECTION_COLUMN].write_record_info_to_data(tid, int(id))
+        self.__set_dirty_bit()
 
     @__pin_frame_decorator
     def get_record_entry(self, id:RID, column_index:int)->int:
@@ -170,6 +172,7 @@ class Frame:
     @__pin_frame_decorator
     def delete_record(self, rid:RID)->None:
         self.physical_pages[Config.RID_COLUMN].write_record_info_to_data(0, int(rid))
+        self.__set_dirty_bit()
 
 
 class Physical_Page:
