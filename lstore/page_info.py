@@ -35,7 +35,7 @@ class Page_Range:
         self.tail_pages = None
 
     def __get_pages(self, page_type:Page_Type)->tuple[list[str],int]:
-        page_dirs = Disk.list_directories_in_path(self.page_range_path)
+        page_dirs:list[str] = Disk.list_directories_in_path(self.page_range_path)
         for page_dir in page_dirs:
             match page_type:
                 case Page_Type.BASE:

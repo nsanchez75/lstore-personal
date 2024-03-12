@@ -205,6 +205,20 @@ class Index:
         if self.__does_index_filename_exist(column_index): raise FileExistsError
         if self.__is_index_in_indices(column_index): raise KeyError
         self.indices[column_index] = Index_Column(self.__get_column_index_filename(column_index), self.order)
+        
+        # add column index values and their respective RIDs to the new tree 
+        num_records:int = Disk.read_from_path_metadata(os.path.dirname(self.index_dir_path))["num_records"]
+        for rid in len(1, num_records+1):
+            rid = RID(rid)
+            # get info of rid's base page
+            base_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{rid.get_page_range_index()}", f"BP{rid.get_base_page_index()}")
+            assert os.path.isdir(base_page_path)
+            tid = BUFFERPOOL.get_indirection_tid(rid, base_page_path)
+            tail_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{tid.get_page_range_index()}", f"TP{tid.get_tail_page_index()}")
+            schema_encoding = BUFFERPOOL.get_schema_encoding(rid, base_page_path)
+            if schema_encoding[column_index] == True: entry_val = BUFFERPOOL.get_record_entry(rid, base_page_path)
+            else:                                     entry_val = BUFFERPOOL.get_record_entry(tid, tail_page_path)
+            self.indices[column_index].add_value(entry_val, rid)
 
     def drop_index(self, column_index: int) -> None:
         """
@@ -218,6 +232,7 @@ class Index:
             raise KeyError
         if self.__is_index_key(column_index):
             raise ValueError
+        assert column_index in self.indices
         del self.indices[column_index]
         os.remove(self.__get_column_index_filename(column_index))
 
