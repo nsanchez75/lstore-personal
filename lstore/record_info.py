@@ -5,6 +5,9 @@ class RID:
     def __init__(self, rid:int)->None:
         self.rid:int = int(rid)
 
+    def __repr__(self)->str:
+        return str(self.rid)
+
     def __str__(self)->str:
         return str(self.rid)
 

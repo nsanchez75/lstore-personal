@@ -47,7 +47,7 @@ class Index_Column:
         entry_value_set.add(rid)
         self.tree[entry_value] = dumps(entry_value_set)
 
-    def __remove_rid_from_entry_value(self, entry_value, rid:RID) -> None:
+    def __remove_rid_from_entry_value(self, entry_value, removed_rid:RID) -> None:
         """
         Deletes an RID from a specified entry value of the column's tree.
 
@@ -56,9 +56,10 @@ class Index_Column:
         if not entry_value in self.tree:
             raise KeyError
         entry_value_set = set(loads(self.tree[entry_value]))
-        print(rid)
-        print(entry_value_set)
-        entry_value_set.remove(rid)
+        for rid in entry_value_set:
+            if int(rid) == int(removed_rid):
+                entry_value_set.remove(rid)
+                break
         self.tree[entry_value] = dumps(entry_value_set)
 
     def set_as_primary_key(self):
@@ -81,7 +82,6 @@ class Index_Column:
         self.__remove_rid_from_entry_value(entry_value, rid)
 
     def get_single_entry(self, entry_value) -> set[RID]:
-        # print("here for", entry_value)
         if not entry_value in self.tree:
             return {}
         return set(loads(self.tree[entry_value]))

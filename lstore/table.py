@@ -92,14 +92,15 @@ class Table:
         self.__access_page_range(record.get_page_range_index())
         self.page_ranges[record.get_page_range_index()].insert_record(record)
 
-    def select_record(self, search_key, search_key_index:int, selected_columns:list, rollback_version:int=0)->list[Record]:
+    def select_record(self, search_key, search_key_index:int, selected_columns:list=None, rollback_version:int=0)->list[Record]:
         rlist = list()
         rids = self.index.locate(search_key, search_key_index)
         for rid in rids:
             self.__access_page_range(rid.get_page_range_index())
             columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
-            assert len(columns) == selected_columns
-            columns = tuple([_ for i, _ in enumerate(columns) if selected_columns[i] == 1])
+            if selected_columns != None:
+                assert len(columns) == len(selected_columns)
+                columns = tuple([_ for i, _ in enumerate(columns) if selected_columns[i] == 1])
             rlist.append(Record(rid, self.key_index, columns))
         return rlist
 
