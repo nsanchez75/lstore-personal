@@ -7,7 +7,7 @@ class Database():
 
     def __init__(self)->None:
         self.tables:dict[str,Table] = dict()
-        self.db_path = None
+        self.db_path = ""
 
     def __get_tables(self)->tuple[list[str],int]:
         table_dirs = Disk.list_directories_in_path(self.db_path)

@@ -128,6 +128,7 @@ class Table:
     def update_record(self, primary_key, new_columns:tuple)->None:
         # identify RID
         rids = self.index.locate(primary_key, self.key_index)
+        if len(rids) == 0: return
         assert len(rids) == 1
         rid = rids.pop()
 
