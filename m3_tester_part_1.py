@@ -34,7 +34,7 @@ records = {}
 seed(3562901)
 
 # array of insert transactions
-insert_transactions = []
+insert_transactions:list[Transaction] = []
 
 for i in range(number_of_transactions):
     insert_transactions.append(Transaction())
@@ -46,7 +46,7 @@ for i in range(0, number_of_records):
     t = insert_transactions[i % number_of_transactions]
     t.add_query(query.insert, grades_table, *records[key])
 
-transaction_workers = []
+transaction_workers:list[TransactionWorker] = []
 for i in range(num_threads):
     transaction_workers.append(TransactionWorker())
     
