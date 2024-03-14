@@ -144,29 +144,29 @@ def correctness_tester1():
 
 def correctness_tester2():
     # different primary key
-    # try:
-    db = Database()
-    test_table3 = db.create_table("test3", 5, 2)
-    records3 = [
-        [1, 1, 0, 2, 1],
-        [2, 1, 1, 1, 2],
-        [3, 0, 2, 5, 1],
-        [4, 1, 3, 1, 3],
-        [5, 2, 4, 1, 1],
-        [6, 1, 5, 1, 1],
-        [7, 0, 6, 1, 0],
-        [8, 1, 7, 1, 1],
-    ]
-    query3 = Query(test_table3)
-    for record in records3:
-        query3.insert(*record)
-    result = query3.sum(3, 5, 4)
-    if result == 5:
-        print("PASS[8]")
-    else:
-        print("Error[8]")
-    # except Exception as e:
-    #     print("Wrong[8]")
+    try:
+        db = Database()
+        test_table3 = db.create_table("test3", 5, 2)
+        records3 = [
+            [1, 1, 0, 2, 1],
+            [2, 1, 1, 1, 2],
+            [3, 0, 2, 5, 1],
+            [4, 1, 3, 1, 3],
+            [5, 2, 4, 1, 1],
+            [6, 1, 5, 1, 1],
+            [7, 0, 6, 1, 0],
+            [8, 1, 7, 1, 1],
+        ]
+        query3 = Query(test_table3)
+        for record in records3:
+            query3.insert(*record)
+        result = query3.sum(3, 5, 4)
+        if result == 5:
+            print("PASS[8]")
+        else:
+            print("Error[8]")
+    except Exception as e:
+        print("Wrong[8]")
 
 
 def generte_keys():
