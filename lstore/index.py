@@ -144,6 +144,7 @@ class Index:
         """
         if self.__does_index_filename_exist(column_index): raise FileExistsError
         if self.__is_index_in_indices(column_index): raise KeyError
+
         self.indices[column_index] = Index_Column(self.__get_column_index_filename(column_index), self.order)
 
         # add column index values and their respective RIDs to the new tree
@@ -156,8 +157,8 @@ class Index:
             tid = BUFFERPOOL.get_indirection_tid(rid, base_page_path)
             tail_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{tid.get_page_range_index()}", f"TP{tid.get_tail_page_index()}")
             schema_encoding = BUFFERPOOL.get_schema_encoding(rid, base_page_path)
-            if schema_encoding[column_index] == True: entry_val = BUFFERPOOL.get_record_entry(rid, base_page_path)
-            else:                                     entry_val = BUFFERPOOL.get_record_entry(tid, tail_page_path)
+            if not schema_encoding[column_index]: entry_val = BUFFERPOOL.get_record_entry(rid, base_page_path, column_index)
+            else:                                 entry_val = BUFFERPOOL.get_record_entry(tid, tail_page_path, column_index)
             self.indices[column_index].add_value(entry_val, rid)
 
     def drop_index(self, column_index: int) -> None:

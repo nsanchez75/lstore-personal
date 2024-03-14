@@ -1,7 +1,7 @@
 import os
 
 from lstore.disk import Disk
-from lstore.record_info import Record
+from lstore.record_info import Record, RID
 from lstore.page_info import Page_Range
 from lstore.index import Index
 
@@ -19,15 +19,17 @@ class Table:
         self.__load_page_ranges()
 
     def __del__(self)->None:
-        metadata = {
-            "table_path": self.table_path,
-            "num_columns": self.num_columns,
-            "key_index": self.key_index,
-            "num_records": self.num_records,
-        }
-        Disk.write_to_path_metadata(self.table_path, metadata)
         del self.page_ranges
         self.page_ranges = None
+
+    def __increment_num_records(self)->None:
+        # increment number of records in object
+        self.num_records += 1
+
+        # increment number of records in data
+        metadata = Disk.read_from_path_metadata(self.table_path)
+        metadata["num_records"] = self.num_records
+        Disk.write_to_path_metadata(self.table_path, metadata)
 
     def __get_page_ranges(self)->tuple[list[str],int]:
         page_range_dirs = Disk.list_directories_in_path(self.table_path)
@@ -80,7 +82,7 @@ class Table:
         Insert record to table.
         """
         # increment num_records first (base RID starts at 1)
-        self.num_records += 1
+        self.__increment_num_records()
 
         # create record
         record = Record(self.num_records, self.key_index, columns)
@@ -94,10 +96,20 @@ class Table:
 
     def select_record(self, search_key, search_key_index:int, selected_columns:list=None, rollback_version:int=0)->list[Record]:
         rlist = list()
-        rids = self.index.locate(search_key, search_key_index)
+        # get specific RIDs from index
+        try:
+            rids = self.index.locate(search_key, search_key_index)
+        # if no index available, conduct full table scan
+        except KeyError:
+            rids = [RID(i) for i in range(1, self.num_records + 1)]
         for rid in rids:
             self.__access_page_range(rid.get_page_range_index())
             columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
+            
+            # conditional that avoids creating records for non-searched info (only really useful for full table scans)
+            if columns[search_key_index] != search_key: continue
+            
+            # construct record and add to records list
             if selected_columns != None:
                 assert len(columns) == len(selected_columns)
                 columns = tuple([_ for i, _ in enumerate(columns) if selected_columns[i] == 1])
