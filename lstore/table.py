@@ -101,7 +101,7 @@ class Table:
             rids = self.index.locate(search_key, search_key_index)
         # if no index available, conduct full table scan
         except KeyError:
-            rids = [RID(i) for i in range(1, self.num_records + 1)]
+            rids = {RID(i) for i in range(1, self.num_records + 1)}
         for rid in rids:
             self.__access_page_range(rid.get_page_range_index())
             columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
