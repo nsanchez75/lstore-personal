@@ -4,6 +4,7 @@ from lstore.disk import Disk
 from lstore.record_info import Record, RID
 from lstore.page_info import Page_Range
 from lstore.index import Index
+from lstore.lock_info import Lock_Manager
 
 class Table:
 
@@ -14,6 +15,7 @@ class Table:
         self.num_records:int                  = num_records
 
         self.index:Index                      = Index(self.table_path, self.num_columns, self.key_index)
+        self.lock_manager:Lock_Manager        = Lock_Manager()
 
         self.page_ranges:dict[int,Page_Range] = dict()
         self.__load_page_ranges()
@@ -77,6 +79,14 @@ class Table:
         if not page_range_index in self.page_ranges:
             self.__create_page_range(page_range_index)
 
+    # def get_rids(self, search_key=None, search_index:int=None)->set[RID]:
+    #     try:
+    #         if search_index == None or search_key == None: raise KeyError
+    #         rids = self.index.locate(search_key, search_index)
+    #     except KeyError:
+    #         rids = {RID(i) for i in range(1, self.num_records + 1)}
+    #     return rids
+
     def insert_record(self, columns:tuple)->None:
         """
         Insert record to table.
@@ -97,6 +107,7 @@ class Table:
     def select_record(self, search_key, search_key_index:int, selected_columns:list=None, rollback_version:int=0)->list[Record]:
         rlist = list()
         # get specific RIDs from index
+        # rids = self.get_rids(search_key, search_key_index)
         try:
             rids = self.index.locate(search_key, search_key_index)
         # if no index available, conduct full table scan

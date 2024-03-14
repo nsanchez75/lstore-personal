@@ -8,7 +8,7 @@ class Transaction:
         Creates a transaction object.
         """
         self.queries:list[tuple] = list() # [(query method, (args))]
-        pass
+        self.tables:set[Table] = set()
 
     def add_query(self, query, table:Table, *args):
         """
@@ -20,6 +20,7 @@ class Transaction:
         - t.add_query(q.update, grades_table, 0, *[None, 1, None, 2, None])
         """
         self.queries.append((query, args))
+        self.tables.add(table)
         # use grades_table for aborting
 
 

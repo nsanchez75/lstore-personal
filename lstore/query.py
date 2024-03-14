@@ -10,7 +10,6 @@ class Query:
     """
     def __init__(self, table:Table):
         self.table = table
-        pass
 
     
     """
