@@ -7,22 +7,22 @@ from lstore.record_info import RID
 class Lock_Manager:
 
     def __init__(self)->None:
-        self.locks:defaultdict[RID,RWL] = defaultdict()
+        self.locks:defaultdict[int,RWL] = defaultdict(RWL)
 
     def get_locks(self)->defaultdict:
         return self.locks
 
-    def acquire_read(self, rid:RID)->bool:
-        self.locks[rid].acquire_read()
+    def acquire_read(self, page_range_index:int)->bool:
+        return self.locks[page_range_index].acquire_read()
 
-    def acquire_write(self, rid:RID)->bool:
-        self.locks[rid].acquire_write()
+    def acquire_write(self, page_range_index:int)->bool:
+        return self.locks[page_range_index].acquire_write()
     
-    def release_read(self, rid:RID)->None:
-        self.locks[rid].release_read()
+    def release_read(self, page_range_index:int)->None:
+        self.locks[page_range_index].release_read()
 
-    def release_write(self, rid:RID)->None:
-        self.locks[rid].release_write()
+    def release_write(self, page_range_index:int)->None:
+        self.locks[page_range_index].release_write()
 
 
 class RWL:
@@ -59,3 +59,5 @@ class RWL:
         self.lock.acquire()
         self.is_writer = False
         self.lock.release()
+
+LM = Lock_Manager()

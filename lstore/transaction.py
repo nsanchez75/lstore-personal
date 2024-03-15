@@ -1,3 +1,4 @@
+from lstore.lock_info import Lock_Manager
 from lstore.table import Table, Record
 from lstore.index import Index
 
@@ -8,7 +9,6 @@ class Transaction:
         Creates a transaction object.
         """
         self.queries:list[tuple] = list() # [(query method, (args))]
-        self.tables:set[Table] = set()
 
     def add_query(self, query, table:Table, *args):
         """
@@ -20,11 +20,9 @@ class Transaction:
         - t.add_query(q.update, grades_table, 0, *[None, 1, None, 2, None])
         """
         self.queries.append((query, args))
-        self.tables.add(table)
         # use grades_table for aborting
 
 
-    # If you choose to implement this differently this method must still return True if transaction commits or False on abort
     def run(self):
         for query, args in self.queries:
             result = query(*args)

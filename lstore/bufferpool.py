@@ -33,6 +33,7 @@ class Bufferpool:
         if not self.__has_capacity():
             self.__evict_frame()
         self.frames[page_path] = Frame(page_path)
+        print("ACCESSING FRAME AT PATH", page_path)
 
     def __access_frame(self, page_path:str)->None:
         if not self.__is_page_in_buffer(page_path):
@@ -129,6 +130,7 @@ class Frame:
     @__pin_frame_decorator
     def insert_record(self, record:Record)->None:
         rid = int(record.get_rid())
+        print(f"WRITING {rid} TO DISK...")
         # create metadata for data
         self.physical_pages[Config.INDIRECTION_COLUMN].write_record_info_to_data(INITIAL_INDIRECTION_VALUE, rid)
         self.physical_pages[Config.RID_COLUMN].write_record_info_to_data(rid, rid)

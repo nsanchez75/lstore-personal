@@ -4,7 +4,7 @@ from lstore.disk import Disk
 from lstore.record_info import Record, RID
 from lstore.page_info import Page_Range
 from lstore.index import Index
-from lstore.lock_info import Lock_Manager
+from lstore.lock_info import LM
 
 class Table:
 
@@ -15,7 +15,8 @@ class Table:
         self.num_records:int                  = num_records
 
         self.index:Index                      = Index(self.table_path, self.num_columns, self.key_index)
-        self.lock_manager:Lock_Manager        = Lock_Manager()
+
+        self.test_count:int = 0
 
         self.page_ranges:dict[int,Page_Range] = dict()
         self.__load_page_ranges()
@@ -91,18 +92,33 @@ class Table:
         """
         Insert record to table.
         """
+        self.test_count += 1
+        print(f"INSERT CALLED {self.test_count} TIMES")
+
+        # lock RID before incrementing num_records (because it access disk)
+        while not LM.acquire_write(RID(self.num_records + 1).get_page_range_index()): pass
+        
         # increment num_records first (base RID starts at 1)
         self.__increment_num_records()
+        rid = RID(self.num_records)
+
+        print(f"INSERTING {rid}...")
+        print(f"COLUMNS TO INSERT: {columns}")
 
         # create record
-        record = Record(self.num_records, self.key_index, columns)
+        record = Record(rid, self.key_index, columns)
 
         # insert to index
-        self.index.insert(record.get_columns(), record.get_rid())
+        self.index.insert(record.get_columns(), rid)
 
         # insert to physical disk
         self.__access_page_range(record.get_page_range_index())
         self.page_ranges[record.get_page_range_index()].insert_record(record)
+
+        print((f"{rid} INSERTED"))
+
+        # release RID
+        LM.release_write(rid.get_page_range_index())
 
     def select_record(self, search_key, search_key_index:int, selected_columns:list=None, rollback_version:int=0)->list[Record]:
         rlist = list()
@@ -114,26 +130,42 @@ class Table:
         except KeyError:
             rids = {RID(i) for i in range(1, self.num_records + 1)}
         for rid in rids:
+            # lock RID
+            while not LM.acquire_read(rid.get_page_range_index()): pass
+
+            # access column values from disk
             self.__access_page_range(rid.get_page_range_index())
             columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
-            
+
             # conditional that avoids creating records for non-searched info (only really useful for full table scans)
             if columns[search_key_index] != search_key: continue
-            
+
             # construct record and add to records list
             if selected_columns != None:
                 assert len(columns) == len(selected_columns)
                 columns = tuple([_ for i, _ in enumerate(columns) if selected_columns[i] == 1])
             rlist.append(Record(rid, self.key_index, columns))
+
+            # unlock RID
+            LM.release_read(rid.get_page_range_index())
+
         return rlist
 
     def sum_records(self, start_range, end_range, aggregate_column_index:int, rollback_version:int=0)->int:
         rsum = 0
         rids = self.index.locate_range(start_range, end_range, self.key_index)
         for rid in rids:
+            # lock RID
+            while not LM.acquire_read(rid.get_page_range_index()): pass
+
+            # access column from disk
             self.__access_page_range(rid.get_page_range_index())
             columns = self.page_ranges[rid.get_page_range_index()].get_record_columns(rid, rollback_version)
             rsum += columns[aggregate_column_index]
+
+            # unlock RID
+            LM.release_read(rid.get_page_range_index())
+
         return rsum
 
     def update_record(self, primary_key, new_columns:tuple)->None:
@@ -142,6 +174,9 @@ class Table:
         if len(rids) == 0: return
         assert len(rids) == 1
         rid = rids.pop()
+
+        # lock RID
+        while not LM.acquire_write(rid.get_page_range_index()): pass
 
         # update entry values associated to RID in index
         old_columns = self.select_record(primary_key, self.key_index)[0].get_columns()
@@ -152,10 +187,16 @@ class Table:
         self.__access_page_range(rid.get_page_range_index())
         self.page_ranges[rid.get_page_range_index()].update_record(rid, old_columns, new_columns)
 
+        # unlock RID
+        LM.release_write(rid.get_page_range_index())
+
     def delete_record(self, primary_key)->None:
         rids = self.index.locate(primary_key, self.key_index)
         assert len(rids) == 1
         rid = rids.pop()
+
+        # lock RID
+        while not LM.acquire_write(rid.get_page_range_index()): pass
 
         # delete record from index
         columns = self.select_record(primary_key, self.key_index)[0].get_columns()
@@ -164,3 +205,6 @@ class Table:
         # delete record from disk
         self.__access_page_range(rid.get_page_range_index())
         self.page_ranges[rid.get_page_range_index()].delete_record(rid)
+
+        # unlock RID
+        LM.release_write(rid.get_page_range_index())
