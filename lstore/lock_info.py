@@ -7,18 +7,23 @@ class Lock_Manager:
 
     def __init__(self)->None:
         self.locks:defaultdict[int,RWL] = defaultdict(RWL)
+        self.latch = threading.RLock() #Latch to protect the lock dict
 
     def acquire_read(self, page_range_index:int)->bool:
-        return self.locks[page_range_index].acquire_read()
+        with self.latch:
+            return self.locks[page_range_index].acquire_read()
 
     def acquire_write(self, page_range_index:int)->bool:
-        return self.locks[page_range_index].acquire_write()
-    
+        with self.latch:
+            return self.locks[page_range_index].acquire_write()
+
     def release_read(self, page_range_index:int)->None:
-        self.locks[page_range_index].release_read()
+        with self.latch:
+            self.locks[page_range_index].release_read()
 
     def release_write(self, page_range_index:int)->None:
-        self.locks[page_range_index].release_write()
+        with self.latch:
+            self.locks[page_range_index].release_write()
 
 
 class RWL:
@@ -29,31 +34,25 @@ class RWL:
         self.lock            = threading.RLock()
 
     def acquire_read(self)->bool:
-        self.lock.acquire()
-        if self.is_writer:
-            self.lock.release()
-            return False
-        self.num_readers += 1
-        self.lock.release()
-        return True
+        with self.lock:
+            if self.is_writer:
+                return False
+            self.num_readers += 1
+            return True
 
     def acquire_write(self)->bool:
-        self.lock.acquire()
-        if self.is_writer or self.num_readers:
-            self.lock.release()
-            return False
-        self.is_writer = True
-        self.lock.release()
-        return True
+        with self.lock:
+            if self.is_writer or self.num_readers:
+                return False
+            self.is_writer = True
+            return True
 
     def release_read(self)->None:
-        self.lock.acquire()
-        self.num_readers -= 1
-        self.lock.release()
+        with self.lock:
+            self.num_readers -= 1
 
     def release_write(self)->None:
-        self.lock.acquire()
-        self.is_writer = False
-        self.lock.release()
+        with self.lock:
+            self.is_writer = False
 
 LM = Lock_Manager()
