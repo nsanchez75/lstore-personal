@@ -93,17 +93,17 @@ class Table:
         Insert record to table.
         """
         self.test_count += 1
-        print(f"INSERT CALLED {self.test_count} TIMES")
+        # print(f"INSERT CALLED {self.test_count} TIMES")
 
         # lock RID before incrementing num_records (because it access disk)
         while not LM.acquire_write(RID(self.num_records + 1).get_page_range_index()): pass
-        
+
         # increment num_records first (base RID starts at 1)
         self.__increment_num_records()
         rid = RID(self.num_records)
 
-        print(f"INSERTING {rid}...")
-        print(f"COLUMNS TO INSERT: {columns}")
+        # print(f"INSERTING {rid}...")
+        # print(f"COLUMNS TO INSERT: {columns}")
 
         # create record
         record = Record(rid, self.key_index, columns)
@@ -115,7 +115,7 @@ class Table:
         self.__access_page_range(record.get_page_range_index())
         self.page_ranges[record.get_page_range_index()].insert_record(record)
 
-        print((f"{rid} INSERTED"))
+        # print((f"{rid} INSERTED"))
 
         # release RID
         LM.release_write(rid.get_page_range_index())

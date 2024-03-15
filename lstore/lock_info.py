@@ -1,16 +1,12 @@
-from threading import Lock
+import threading
 from collections import defaultdict
 
-from lstore.record_info import RID
 
 
 class Lock_Manager:
 
     def __init__(self)->None:
         self.locks:defaultdict[int,RWL] = defaultdict(RWL)
-
-    def get_locks(self)->defaultdict:
-        return self.locks
 
     def acquire_read(self, page_range_index:int)->bool:
         return self.locks[page_range_index].acquire_read()
@@ -30,7 +26,7 @@ class RWL:
     def __init__(self)->None:
         self.num_readers:int = 0
         self.is_writer:bool  = False
-        self.lock:Lock       = Lock()
+        self.lock            = threading.RLock()
 
     def acquire_read(self)->bool:
         self.lock.acquire()

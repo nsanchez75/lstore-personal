@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 from lstore.db import Database
 from lstore.query import Query
 from lstore.transaction import Transaction
@@ -37,10 +39,10 @@ transaction_workers = []
 transactions = []
 
 for i in range(number_of_transactions):
-    transactions.append(Transaction())
+    transactions.append(deepcopy(Transaction()))
 
 for i in range(num_threads):
-    transaction_workers.append(TransactionWorker())
+    transaction_workers.append(deepcopy(TransactionWorker()))
 
 
 

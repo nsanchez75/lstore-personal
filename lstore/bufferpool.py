@@ -87,6 +87,7 @@ class Frame:
 
     def __del__(self)->None:
         if self.is_dirty:
+            print(f"WRITING DATA FROM {self.page_path} TO DISK")
             for physical_page in self.physical_pages:
                 physical_page.write_data_to_disk()
 
@@ -130,7 +131,6 @@ class Frame:
     @__pin_frame_decorator
     def insert_record(self, record:Record)->None:
         rid = int(record.get_rid())
-        print(f"WRITING {rid} TO DISK...")
         # create metadata for data
         self.physical_pages[Config.INDIRECTION_COLUMN].write_record_info_to_data(INITIAL_INDIRECTION_VALUE, rid)
         self.physical_pages[Config.RID_COLUMN].write_record_info_to_data(rid, rid)

@@ -4,9 +4,9 @@ from lstore.transaction import Transaction
 from lstore.table import Table, Record
 from lstore.index import Index
 
+threads = list()
 
-threads:list[Thread] = list()
-
+num_transaction_workers = 0
 
 class TransactionWorker:
 
@@ -14,6 +14,9 @@ class TransactionWorker:
         """
         Creates a transaction worker object.
         """
+        global num_transaction_workers
+        self.id:int                         = num_transaction_workers
+        num_transaction_workers += 1
         self.transactions:list[Transaction] = transactions
         self.stats:list[bool]               = list()
         self.result:int                     = 0
@@ -24,15 +27,19 @@ class TransactionWorker:
         """
         Appends t to transactions
         """
+        print(f"APPENDING TRANSACTION {t.id} IN TW {self.id}")
         self.transactions.append(t)
+        print(f"LIST OF TRANSACTION IDS IN TW {self.id}: {[_.id for _ in self.transactions]}")
 
 
     def run(self):
         """
         Runs all transaction as a thread
         """
+        print(f"RUNNING TRANSACTION WORKER {self.id}")
         thread = Thread(target=self.__run, args=())
         self.thread = thread
+        global threads
         threads.append(thread)
         thread.start()
 
@@ -47,6 +54,7 @@ class TransactionWorker:
     def __run(self):
         for transaction in self.transactions:
             # each transaction returns True if committed or False if aborted
+            print(f"TRANSACTION WORKER {self.id} RUNNING TRANSACTION {transaction.id}")
             self.stats.append(transaction.run())
         # stores the number of transactions that committed
         self.result = len(list(filter(lambda x: x, self.stats)))
