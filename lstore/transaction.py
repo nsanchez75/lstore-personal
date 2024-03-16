@@ -1,3 +1,4 @@
+from lstore.bufferpool import BUFFERPOOL
 from lstore.lock_info import Lock_Manager
 from lstore.table import Table, Record
 from lstore.index import Index
@@ -30,27 +31,26 @@ class Transaction:
 
     def run(self):
         print(f"RUNNING TRANSACTION {self.id}")
-        with open(f"test_transaction_actual_{self.id}.log", 'w') as f:
-            for query, args in self.queries:
-                if query.__name__ == "insert":
-                    f.write(f"{args}\n")
+        # with open(f"test_transaction_actual_{self.id}.log", 'w') as f:
+        #     for query, args in self.queries:
+        #         if query.__name__ == "insert":
+        #             f.write(f"{args}\n")
 
         for query, args in self.queries:
             result = query(*args)
-            if query.__name__ == "insert":
-                print(f"RUNNING INSERT ON {args[0] - 92106429}")
+            # match query.__name__:
+            #     case "insert":
+            #         print(f"RUNNING INSERT ON {args[0] - 92106429}")
+            #     case "select":
+            #         print(f"RUNNING SELECT ON {args[0]}")
+            #     case "update":
+            #         print(f"RUNNING UPDATE ON {args[0]}")
             # If the query has failed the transaction should abort
             if result == False:
-                return self.abort()
+                pass
         return self.commit()
 
-
-    def abort(self):
-        #TODO: do roll-back and any other necessary operations
-        return False
-
-
     def commit(self):
-        # TODO: commit to database
+        BUFFERPOOL.commit_writes_to_disk()
         return True
 

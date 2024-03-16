@@ -1,9 +1,8 @@
 import os
 from pickle import loads, dumps
 from bplustree import BPlusTree
-from bitarray import bitarray
+from threading import RLock
 
-from lstore.lock_info import LM
 from lstore.disk import Disk
 from lstore.bufferpool import BUFFERPOOL
 from lstore.record_info import RID
@@ -11,7 +10,6 @@ import lstore.config as Config
 
 # source for bplustree module: https://github.com/NicolasLM/bplustree
 
-INDEX_LOCK_ID = -1
 
 class Index_Column:
 
@@ -110,6 +108,8 @@ class Index:
         self.order:int                       = Config.INDEX_ORDER_NUMBER
         self.indices:dict[int, Index_Column] = dict()  # {column_index: Index_Column}
 
+        self.lock:RLock                      = RLock()
+
         if os.path.exists(self.index_dir_path):
             self.__load_column_indices()
         else:
@@ -183,34 +183,31 @@ class Index:
         """
         Adds record information to the created index columns.
         """
-        LM.acquire_write(INDEX_LOCK_ID)
-        self.__check_num_columns_valid(record_columns)
-        for i, record_entry_value in enumerate(record_columns):
-            if i in self.indices:
-                self.indices[i].add_value(record_entry_value, rid)
-        LM.release_write(INDEX_LOCK_ID)
+        with self.lock:
+            self.__check_num_columns_valid(record_columns)
+            for i, record_entry_value in enumerate(record_columns):
+                if i in self.indices:
+                    self.indices[i].add_value(record_entry_value, rid)
 
     def delete(self, record_columns:tuple, rid:RID) -> None:
         """
         Deletes record information from the created index columns.
         """
-        LM.acquire_write(INDEX_LOCK_ID)
-        self.__check_num_columns_valid(record_columns)
-        for i, record_entry_value in enumerate(record_columns):
-            if i in self.indices:
-                self.indices[i].delete_value(record_entry_value, rid)
-        LM.release_write(INDEX_LOCK_ID)
+        with self.lock:
+            self.__check_num_columns_valid(record_columns)
+            for i, record_entry_value in enumerate(record_columns):
+                if i in self.indices:
+                    self.indices[i].delete_value(record_entry_value, rid)
 
     def locate(self, entry_value, column_index: int) -> set[RID]:
         """
         Returns the location of all records with the given value
         within a specified column.
         """
-        LM.acquire_read(INDEX_LOCK_ID) # use placeholder ID
-        if not column_index in self.indices:
-            raise KeyError
-        result = self.indices[column_index].get_single_entry(entry_value)
-        LM.release_read(INDEX_LOCK_ID)
+        with self.lock:
+            if not column_index in self.indices:
+                raise KeyError
+            result = self.indices[column_index].get_single_entry(entry_value)
         return result
 
     def locate_range(self, begin, end, column_index: int) -> set[RID]:
@@ -218,20 +215,18 @@ class Index:
         Returns the RIDs of all records with values in a specified column
         between "begin" and "end" (bounds-inclusive).
         """
-        LM.acquire_read(INDEX_LOCK_ID)
-        if not column_index in self.indices:
-            raise KeyError
-        result = self.indices[column_index].get_ranged_entry(begin, end)
-        LM.release_read(INDEX_LOCK_ID)
-        return 
+        with self.lock:
+            if not column_index in self.indices:
+                raise KeyError
+            result = self.indices[column_index].get_ranged_entry(begin, end)
+        return result
 
     def update(
         self, old_entries:tuple, new_entries:tuple, rid: int)->None:
         """
         Updates an RID-associated entry value.
         """
-        LM.acquire_write(INDEX_LOCK_ID)
-        for i in range(len(new_entries)):
-            if new_entries[i] != None and i in self.indices:
-                self.indices[i].update_value(old_entries[i], new_entries[i], rid)
-        LM.release_write(INDEX_LOCK_ID)
+        with self.lock:
+            for i in range(len(new_entries)):
+                if new_entries[i] != None and i in self.indices:
+                    self.indices[i].update_value(old_entries[i], new_entries[i], rid)
