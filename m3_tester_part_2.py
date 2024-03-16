@@ -35,18 +35,14 @@ for i in range(0, number_of_records):
     records[key] = [key, randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20)]
     # print(records[key])
 
-transaction_workers = []
-transactions = []
+transaction_workers:list[TransactionWorker] = []
+transactions:list[Transaction] = []
 
 for i in range(number_of_transactions):
     transactions.append(deepcopy(Transaction()))
 
 for i in range(num_threads):
     transaction_workers.append(deepcopy(TransactionWorker()))
-
-
-
-
 
 # x update on every column
 for j in range(number_of_operations_per_record):
@@ -62,14 +58,11 @@ for j in range(number_of_operations_per_record):
             records[key][i] = value
             transactions[key % number_of_transactions].add_query(query.select, grades_table, key, 0, [1, 1, 1, 1, 1])
             transactions[key % number_of_transactions].add_query(query.update, grades_table, key, *updated_columns)
-print("Update finished")
 
 
 # add trasactions to transaction workers  
 for i in range(number_of_transactions):
     transaction_workers[i % num_threads].add_transaction(transactions[i])
-
-
 
 # run transaction workers
 for i in range(num_threads):

@@ -38,13 +38,13 @@ class Transaction:
 
         for query, args in self.queries:
             result = query(*args)
-            match query.__name__:
-                # case "insert":
-                #     print(f"RUNNING INSERT ON {args[0] - 92106429}")
-                case "select":
-                    print(f"RUNNING SELECT ON {args[0]}")
-                case "update":
-                    print(f"RUNNING UPDATE ON {args[0]}")
+            # match query.__name__:
+            #     case "insert":
+            #         print(f"RUNNING INSERT ON {args[0] - 92106429}")
+            #     case "select":
+            #         print(f"RUNNING SELECT ON {args[0]}")
+            #     case "update":
+            #         print(f"RUNNING UPDATE ON {args[0]}")
             # If the query has failed the transaction should abort
             if result == False:
                 pass
