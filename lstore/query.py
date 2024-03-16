@@ -18,8 +18,8 @@ class Query:
     # Returns True upon succesful deletion
     # Return False if record doesn't exist or is locked due to 2PL
     """
-    def delete(self, primary_key):
-        self.table.delete_record(primary_key)
+    def delete(self, primary_key)->bool:
+        return self.table.delete_record(primary_key)
     
     
     """
@@ -27,8 +27,8 @@ class Query:
     # Return True upon succesful insertion
     # Returns False if insert fails for whatever reason
     """
-    def insert(self, *columns):
-        self.table.insert_record(columns)
+    def insert(self, *columns)->bool:
+        return self.table.insert_record(columns)
 
     
     """
@@ -64,9 +64,8 @@ class Query:
     # Returns True if update is succesful
     # Returns False if no records exist with given key or if the target record cannot be accessed due to 2PL locking
     """
-    def update(self, primary_key, *columns):
-        self.table.update_record(primary_key, columns)
-        return True
+    def update(self, primary_key, *columns)->bool:
+        return self.table.update_record(primary_key, columns)
 
     
     """

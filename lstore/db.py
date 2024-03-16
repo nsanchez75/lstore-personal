@@ -1,5 +1,6 @@
 import os
 
+from lstore.bufferpool import BUFFERPOOL
 from lstore.disk import Disk
 from lstore.table import Table
 
@@ -36,8 +37,13 @@ class Database():
             print(f"Database at path {path} created.")
 
     def close(self):
+        # delete tables (causes cascade of deletes)
         del self.tables
         self.tables = None
+
+        # delete bufferpool
+        global BUFFERPOOL
+        del BUFFERPOOL
 
     def create_table(self, name:str, num_columns:int, key_index:int)->Table:
         """

@@ -47,9 +47,9 @@ for i in range(0, number_of_records):
     keys.append(key)
     records[key] = [key, randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20)]
     t = insert_transactions[i % number_of_transactions]
-    if not os.path.exists(f"test_transaction_{i % number_of_transactions}.log"): open(f"test_transaction_{i % number_of_transactions}.log", 'w')
-    with open(f"test_transaction_{i % number_of_transactions}.log", 'a') as f:
-        f.write(f"{records[key]}\n")
+    # if not os.path.exists(f"test_transaction_{i % number_of_transactions}.log"): open(f"test_transaction_{i % number_of_transactions}.log", 'w')
+    # with open(f"test_transaction_{i % number_of_transactions}.log", 'a') as f:
+    #     f.write(f"{records[key]}\n")
     t.add_query(query.insert, grades_table, *records[key])
 
 transaction_workers:list[TransactionWorker] = []
@@ -57,12 +57,12 @@ for i in range(num_threads):
     transaction_workers.append(deepcopy(TransactionWorker()))
     
 for i in range(number_of_transactions):
-    print(f"APPENDING TRANSACTION {i} TO TW {i % num_threads}")
+    # print(f"APPENDING TRANSACTION {i} TO TW {i % num_threads}")
     transaction_workers[i % num_threads].add_transaction(insert_transactions[i])
 
-for transaction_worker in transaction_workers:
-    print(f"TW {transaction_worker.id}'s TRANSACTIONS:")
-    print([_.id for _ in transaction_worker.transactions])
+# for transaction_worker in transaction_workers:
+    # print(f"TW {transaction_worker.id}'s TRANSACTIONS:")
+    # print([_.id for _ in transaction_worker.transactions])
 
 
 # run transaction workers
