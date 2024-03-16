@@ -8,29 +8,30 @@ threads = list()
 
 num_transaction_workers = 0
 
+
 class TransactionWorker:
 
-    def __init__(self, transactions:list = [])->None:
+    def __init__(self, transactions: list = []) -> None:
         """
         Creates a transaction worker object.
         """
         global num_transaction_workers
-        self.id:int                         = num_transaction_workers
+        self.id: int = num_transaction_workers
         num_transaction_workers += 1
-        self.transactions:list[Transaction] = transactions
-        self.stats:list[bool]               = list()
-        self.result:int                     = 0
-        self.thread:Thread                  = None
+        self.transactions: list[Transaction] = transactions
+        self.stats: list[bool] = list()
+        self.result: int = 0
+        self.thread: Thread = None
 
-
-    def add_transaction(self, t:Transaction):
+    def add_transaction(self, t: Transaction):
         """
         Appends t to transactions
         """
         print(f"APPENDING TRANSACTION {t.id} IN TW {self.id}")
         self.transactions.append(t)
-        print(f"LIST OF TRANSACTION IDS IN TW {self.id}: {[_.id for _ in self.transactions]}")
-
+        print(
+            f"LIST OF TRANSACTION IDS IN TW {self.id}: {[_.id for _ in self.transactions]}"
+        )
 
     def run(self):
         """
@@ -43,13 +44,11 @@ class TransactionWorker:
         threads.append(thread)
         thread.start()
 
-
     def join(self):
         """
         Waits for the worker to finish.
         """
         self.thread.join()
-
 
     def __run(self):
         for transaction in self.transactions:

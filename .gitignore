@@ -5,3 +5,4 @@ M2
 MT
 test_transaction_*.log 
 lstore/__pycache__/__init__.cpython-*.pyc
+venv/

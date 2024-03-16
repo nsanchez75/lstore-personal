@@ -9,10 +9,10 @@ from lstore.transaction_worker import TransactionWorker
 from random import choice, randint, sample, seed
 
 db = Database()
-db.open('./ECS165')
+db.open("./ECS165")
 
 # creating grades table
-grades_table = db.create_table('Grades', 5, 0)
+grades_table = db.create_table("Grades", 5, 0)
 
 # create a query class for the grades table
 query = Query(grades_table)
@@ -30,14 +30,14 @@ try:
     grades_table.index.create_index(3)
     grades_table.index.create_index(4)
 except Exception as e:
-    print('Index API not implemented properly, tests may fail.')
+    print("Index API not implemented properly, tests may fail.")
 
 keys = []
 records = {}
 seed(3562901)
 
 # array of insert transactions
-insert_transactions:list[Transaction] = []
+insert_transactions: list[Transaction] = []
 
 for i in range(number_of_transactions):
     insert_transactions.append(deepcopy(Transaction()))
@@ -45,19 +45,26 @@ for i in range(number_of_transactions):
 for i in range(0, number_of_records):
     key = 92106429 + i
     keys.append(key)
-    records[key] = [key, randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20), randint(i * 20, (i + 1) * 20)]
+    records[key] = [
+        key,
+        randint(i * 20, (i + 1) * 20),
+        randint(i * 20, (i + 1) * 20),
+        randint(i * 20, (i + 1) * 20),
+        randint(i * 20, (i + 1) * 20),
+    ]
     t = insert_transactions[i % number_of_transactions]
-    if not os.path.exists(f"test_transaction_{i % number_of_transactions}.log"): open(f"test_transaction_{i % number_of_transactions}.log", 'w')
-    with open(f"test_transaction_{i % number_of_transactions}.log", 'a') as f:
+    if not os.path.exists(f"test_transaction_{i % number_of_transactions}.log"):
+        open(f"test_transaction_{i % number_of_transactions}.log", "w")
+    with open(f"test_transaction_{i % number_of_transactions}.log", "a") as f:
         f.write(f"{records[key]}\n")
     t.add_query(query.insert, grades_table, *records[key])
 
-transaction_workers:list[TransactionWorker] = []
+transaction_workers: list[TransactionWorker] = []
 for i in range(num_threads):
     transaction_workers.append(deepcopy(TransactionWorker()))
-    
+
 for i in range(number_of_transactions):
-    print(f"APPENDING TRANSACTION {i} TO TW {i % num_threads}")
+    # print(f"APPENDING TRANSACTION {i} TO TW {i % num_threads}")
     transaction_workers[i % num_threads].add_transaction(insert_transactions[i])
 
 for transaction_worker in transaction_workers:
@@ -82,7 +89,7 @@ for key in keys:
         if column != records[key][i]:
             error = True
     if error:
-        print('select error on', key, ':', record, ', correct:', records[key])
+        print("select error on", key, ":", record, ", correct:", records[key])
     else:
         pass
         # print('select on', key, ':', record)
