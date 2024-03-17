@@ -8,6 +8,7 @@ from lstore.record_info import Record, RID
 from lstore.page_info import Page_Range
 from lstore.index import Index
 
+
 class Table:
 
     def __init__(self, table_path:str, num_columns:int, key_index:int, num_records:int)->None:
@@ -18,7 +19,7 @@ class Table:
 
         self.index:Index                      = Index(self.table_path, self.num_columns, self.key_index)
         self.lock_manager:Lock_Manager        = Lock_Manager()
-        self.latch:RLock                       = RLock()
+        self.latch:RLock                      = RLock()
 
         self.page_ranges:dict[int,Page_Range] = dict()
         self.__load_page_ranges()
@@ -93,7 +94,6 @@ class Table:
         """
         Insert record to table.
         """
-
         # lock RID
         while not self.lock_manager.acquire_write(RID(self.num_records + 1).get_page_range_index()): pass
 
