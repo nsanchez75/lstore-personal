@@ -130,6 +130,9 @@ class Page_Range:
         self.base_pages[record.get_base_page_index()].insert_record(record)
 
     def get_record_columns(self, rid:RID, rollback_version:int)->tuple:
+        """
+        Get Record columns
+        """
         columns = list()
         # print(f"GETTING COLUMNS FOR RID {rid} WITH {abs(rollback_version)} ROLLBACKS")
         tid = self.base_pages[rid.get_base_page_index()].get_indirection_tid(rid)
@@ -147,6 +150,9 @@ class Page_Range:
         return tuple(columns)
 
     def update_record(self, rid:RID, old_columns:tuple, new_columns:tuple)->None:
+        """
+        Update Record
+        """
         self.__access_base_page(rid.get_base_page_index())
         tid = self.base_pages[rid.get_base_page_index()].get_indirection_tid(rid)
 
@@ -183,6 +189,9 @@ class Page_Range:
         # self.__merge()
 
     def delete_record(self, rid:RID)->None:
+        """
+        Delete Record
+        """
         self.__access_base_page(rid.get_base_page_index())
         self.base_pages[rid.get_base_page_index()].delete_record(rid)
 
@@ -194,24 +203,45 @@ class Base_Page:
         self.base_page_index = base_page_index
 
     def insert_record(self, record:Record)->None:
+        """
+        Insert Base Record
+        """
         BUFFERPOOL.insert_record(record, self.base_page_path)
 
     def get_schema_encoding(self, rid:RID)->bitarray:
+        """
+        Get schema encoding for Base Record
+        """
         return BUFFERPOOL.get_schema_encoding(rid, self.base_page_path)
 
     def set_schema_encoding(self, rid:RID, schema_encoding:bitarray)->None:
+        """
+        Set schema encoding for Base Record
+        """
         BUFFERPOOL.set_schema_encoding(rid, schema_encoding, self.base_page_path)
 
     def get_indirection_tid(self, rid:RID)->TID:
+        """
+        Get indirection for Base Record
+        """
         return BUFFERPOOL.get_indirection_tid(rid, self.base_page_path)
 
     def set_indirection_tid(self, rid:RID, tid:TID)->None:
+        """
+        Set indirection for Base Record
+        """
         BUFFERPOOL.set_indirection_tid(rid, tid, self.base_page_path)
 
     def select_record(self, rid:RID, column_index:int)->int:
+        """
+        Select Base Record
+        """
         return BUFFERPOOL.get_record_entry(rid, self.base_page_path, column_index)
 
     def delete_record(self, rid:RID)->None:
+        """
+        Delete Base Record
+        """
         BUFFERPOOL.delete_record(rid, self.base_page_path)
 
 
@@ -222,13 +252,25 @@ class Tail_Page:
         self.tail_page_index = tail_page_index
 
     def insert_record(self, record:Record)->None:
+        """
+        Insert Tail Record
+        """
         BUFFERPOOL.insert_record(record, self.tail_page_path)
 
     def select_record(self, tid:TID, column_index:int)->int:
+        """
+        Select Tail Record
+        """ 
         return BUFFERPOOL.get_record_entry(tid, self.tail_page_path, column_index)
 
     def get_indirection_tid(self, tid:TID)->TID:
+        """
+        Get indirection for Tail Record
+        """
         return BUFFERPOOL.get_indirection_tid(tid, self.tail_page_path)
 
     def set_indirection_tid(self, tid:TID, indirection_tid:TID)->None:
+        """
+        Set indirection for Tail Record
+        """
         BUFFERPOOL.set_indirection_tid(tid, indirection_tid, self.tail_page_path)

@@ -15,9 +15,15 @@ class RID:
         return self.rid
 
     def get_page_range_index(self)->int:
+        """
+        Get Page Range index rid is in
+        """
         return (abs(self.rid) - 1) // (Config.NUM_RECORDS_PER_PAGE * Config.NUM_BASE_PAGES_PER_PAGE_RANGE)
 
     def get_base_page_index(self)->int:
+        """
+        Get Base Page index rid is in
+        """
         return ((abs(self.rid)- 1) // Config.NUM_RECORDS_PER_PAGE) % Config.NUM_BASE_PAGES_PER_PAGE_RANGE
 
 
@@ -30,6 +36,9 @@ class TID(RID):
         return self.rid
 
     def get_tail_page_index(self)->int:
+        """
+        Get Tail Page index tid is in
+        """
         return (abs(self.rid) - 1) // Config.NUM_RECORDS_PER_PAGE
 
 
@@ -44,16 +53,31 @@ class Record:
         return f"RID {self.rid}: {self.columns}"
 
     def get_rid(self)->RID:
+        """
+        Get RID  
+        """
         return self.rid
 
     def set_rid(self, new_rid:RID)->None:
+        """
+        Set RID  
+        """
         self.rid = new_rid
 
     def get_columns(self)->list:
+        """
+        Get columns for Record
+        """
         return self.columns
 
     def get_page_range_index(self)->int:
+        """
+        Get Page Range index for Record RID
+        """
         return self.rid.get_page_range_index()
 
     def get_base_page_index(self)->int:
+        """
+        Get Base Page index for Record RID
+        """
         return self.rid.get_base_page_index()

@@ -122,6 +122,9 @@ class Table:
             self.lock_manager.release_write(rid.get_page_range_index())
 
     def select_record(self, search_key, search_key_index:int, selected_columns:list=None, rollback_version:int=0)->list[Record]:
+        """
+        Select Record from Table
+        """
         rlist = list()
 
         # get specific RIDs from index
@@ -154,6 +157,9 @@ class Table:
         return rlist
 
     def sum_records(self, start_range, end_range, aggregate_column_index:int, rollback_version:int=0)->int:
+        """
+        Sum Records from Table
+        """
         rsum = 0
 
         # get RIDs
@@ -178,6 +184,9 @@ class Table:
         return rsum
 
     def update_record(self, primary_key, new_columns:tuple)->bool:
+        """
+        Update Record from Table
+        """
         # identify RID
         rids = self.index.locate(primary_key, self.key_index)
         if len(rids) == 0: return
@@ -213,6 +222,9 @@ class Table:
             self.lock_manager.release_write(rid.get_page_range_index())
 
     def delete_record(self, primary_key)->bool:
+        """
+        Delete Record from Table
+        """
         rids = self.index.locate(primary_key, self.key_index)
         assert len(rids) == 1
         rid = rids.pop()
