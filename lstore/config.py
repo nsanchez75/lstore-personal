@@ -16,3 +16,6 @@ INDEX_ORDER_NUMBER = 4
 
 # bufferpool configuration
 NUM_FRAMES_IN_BUFFERPOOL = 100
+
+# merge configuration
+MERGE_THRESHOLD = 1024

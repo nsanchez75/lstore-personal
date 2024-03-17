@@ -1,3 +1,4 @@
+import io
 import os
 from pickle import load, dump
 
@@ -17,9 +18,9 @@ class Disk:
     return rlist
 
   def write_to_path_metadata(path:str, metadata:dict)->None:
-    with open(os.path.join(path, ".metadata.pkl"), 'wb') as f:
+    with io.open(os.path.join(path, ".metadata.pkl"), 'wb') as f:
       dump(metadata, f)
 
   def read_from_path_metadata(path:str)->dict:
-    with open(os.path.join(path, ".metadata.pkl"), 'rb') as f:
+    with io.open(os.path.join(path, ".metadata.pkl"), 'rb') as f:
       return load(f)

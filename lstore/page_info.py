@@ -1,8 +1,10 @@
 import os
 from bitarray import bitarray
 from enum import Enum
+from threading import RLock
 from copy import deepcopy
 
+import lstore.config as Config
 from lstore.disk import Disk
 from lstore.bufferpool import BUFFERPOOL
 from lstore.record_info import Record, RID, TID
@@ -20,6 +22,8 @@ class Page_Range:
         self.page_range_index:int           = page_range_index
         self.latest_tid:int                 = latest_tid
         self.tps_index:int                  = tps_index
+
+        self.latch:RLock                     = RLock()
 
         self.base_pages:dict[int,Base_Page] = dict()
         self.tail_pages:dict[int,Tail_Page] = dict()
@@ -52,21 +56,22 @@ class Page_Range:
         """
         Load base pages from disk.
         """
-        page_paths, num_pages = self.__get_pages(Page_Type.ANY)
-        if not num_pages: return
-        for page_path in page_paths:
-            page_index = int(os.path.basename(page_path)[2:])
-            metadata = Disk.read_from_path_metadata(page_path)
-            match os.path.basename(page_path)[:2]:
-                case "BP": self.base_pages[page_index] = Base_Page(
-                        metadata["base_page_path"],
-                        metadata["base_page_index"],
-                    )
-                case "TP": self.tail_pages[page_index] = Tail_Page(
-                        metadata["tail_page_path"],
-                        metadata["tail_page_index"],
-                    )
-                case _: raise FileNotFoundError
+        with self.latch:
+            page_paths, num_pages = self.__get_pages(Page_Type.ANY)
+            if not num_pages: return
+            for page_path in page_paths:
+                page_index = int(os.path.basename(page_path)[2:])
+                metadata = Disk.read_from_path_metadata(page_path)
+                match os.path.basename(page_path)[:2]:
+                    case "BP": self.base_pages[page_index] = Base_Page(
+                            metadata["base_page_path"],
+                            metadata["base_page_index"],
+                        )
+                    case "TP": self.tail_pages[page_index] = Tail_Page(
+                            metadata["tail_page_path"],
+                            metadata["tail_page_index"],
+                        )
+                    case _: raise FileNotFoundError
 
     def __create_base_page(self, base_page_index)->None:
         base_page_path = os.path.join(self.page_range_path, f"BP{base_page_index}")
@@ -83,8 +88,9 @@ class Page_Range:
         )
 
     def __access_base_page(self, base_page_index:int)->None:
-        if not base_page_index in self.base_pages:
-            self.__create_base_page(base_page_index)
+        with self.latch:
+            if not base_page_index in self.base_pages:
+                self.__create_base_page(base_page_index)
 
     def __create_tail_page(self, tail_page_index)->None:
         tail_page_path = os.path.join(self.page_range_path, f"TP{tail_page_index}")
@@ -101,8 +107,21 @@ class Page_Range:
         )
 
     def __access_tail_page(self, tail_page_index:int)->None:
-        if not tail_page_index in self.tail_pages:
-            self.__create_tail_page(tail_page_index)
+        with self.latch:
+            if not tail_page_index in self.tail_pages:
+                self.__create_tail_page(tail_page_index)
+
+    def __merge(self)->None:
+        if not self.latest_tid % Config.MERGE_THRESHOLD:
+            return
+        # print("merge is happening")
+        # with self.latch:
+            # # copy base pages associated w/ page range
+            # base_pages = deepcopy(self.base_pages)
+            
+            # # determine number of columns
+            # num_columns = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["num_columns"]
+        
 
     def insert_record(self, record:Record)->None:
         """
@@ -155,6 +174,9 @@ class Page_Range:
         self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
         if not int(tid) == -1:
             self.tail_pages[new_tid.get_tail_page_index()].set_indirection_tid(new_tid, tid)
+
+        # perform merging if necessary
+        # self.__merge()
 
     def delete_record(self, rid:RID)->None:
         self.__access_base_page(rid.get_base_page_index())

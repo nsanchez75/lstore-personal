@@ -49,5 +49,3 @@ class RWL:
     def release_write(self)->None:
         with self.lock:
             self.is_writer = False
-
-LM = Lock_Manager()

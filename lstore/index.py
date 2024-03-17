@@ -14,8 +14,11 @@ import lstore.config as Config
 class Index_Column:
 
     def __init__(self, file_path: str, order: int) -> None:
+        self.file_path = file_path
         self.tree = BPlusTree(filename=file_path, order=order)
         self.is_key = False
+
+        self.latch:RLock = RLock()
 
     def __del__(self):
         """
@@ -66,35 +69,40 @@ class Index_Column:
         self.is_key = True
 
     def add_value(self, entry_value, rid: int) -> None:
-        if not entry_value in self.tree:
-            self.__add_rid_to_non_existant_entry_value(entry_value, rid)
-        else:
-            self.__add_rid_to_existing_entry_value(entry_value, rid)
+        with self.latch:
+            if not entry_value in self.tree:
+                self.__add_rid_to_non_existant_entry_value(entry_value, rid)
+            else:
+                self.__add_rid_to_existing_entry_value(entry_value, rid)
 
     def update_value(self, old_entry_value, new_entry_value, rid: RID) -> None:
-        self.__remove_rid_from_entry_value(old_entry_value, rid)
-        if not new_entry_value in self.tree:
-            self.__add_rid_to_non_existant_entry_value(new_entry_value, rid)
-        else:
-            self.__add_rid_to_existing_entry_value(new_entry_value, rid)
+        with self.latch:
+            self.__remove_rid_from_entry_value(old_entry_value, rid)
+            if not new_entry_value in self.tree:
+                self.__add_rid_to_non_existant_entry_value(new_entry_value, rid)
+            else:
+                self.__add_rid_to_existing_entry_value(new_entry_value, rid)
 
     def delete_value(self, entry_value, rid: RID) -> None:
-        self.__remove_rid_from_entry_value(entry_value, rid)
+        with self.latch:
+            self.__remove_rid_from_entry_value(entry_value, rid)
 
     def get_single_entry(self, entry_value) -> set[RID]:
-        if not entry_value in self.tree:
-            return {}
-        return set(loads(self.tree[entry_value]))
+        with self.latch:
+            if not entry_value in self.tree:
+                return {}
+            return set(loads(self.tree[entry_value]))
 
     def get_ranged_entry(self, lower_bound, upper_bound) -> set[RID]:
-        rset = set()
-        try:
-            for key, rids in self.tree.items():
-                if lower_bound <= key and key <= upper_bound:
-                    rset = rset.union(set(loads(rids)))
-        except RuntimeError:  # bypasses issue w/ using iteration on tree
-            pass
-        return rset
+        with self.latch:
+            rset = set()
+            try:
+                for key, rids in self.tree.items():
+                    if lower_bound <= key and key <= upper_bound:
+                        rset = rset.union(set(loads(rids)))
+            except RuntimeError:  # bypasses issue w/ using iteration on tree
+                pass
+            return rset
 
 
 class Index:
@@ -108,7 +116,7 @@ class Index:
         self.order:int                       = Config.INDEX_ORDER_NUMBER
         self.indices:dict[int, Index_Column] = dict()  # {column_index: Index_Column}
 
-        self.lock:RLock                      = RLock()
+        self.latch:RLock                      = RLock()
 
         if os.path.exists(self.index_dir_path):
             self.__load_column_indices()
@@ -118,10 +126,11 @@ class Index:
             self.create_index(primary_key_index)
 
     def __load_column_indices(self) -> None:
-        for column_db_file in os.listdir(self.index_dir_path):
-            column_index = int(column_db_file.removesuffix(".db"))
-            column_index_path = os.path.join(self.index_dir_path, column_db_file)
-            self.indices[column_index] = Index_Column(column_index_path, self.order)
+        with self.latch:
+            for column_db_file in os.listdir(self.index_dir_path):
+                column_index = int(column_db_file.removesuffix(".db"))
+                column_index_path = os.path.join(self.index_dir_path, column_db_file)
+                self.indices[column_index] = Index_Column(column_index_path, self.order)
 
     def __get_column_index_filename(self, column_index: int) -> str:
         return os.path.join(self.index_dir_path, f"{column_index}.db")
@@ -144,24 +153,25 @@ class Index:
         Creates an index for a specified column. This scans the existing data
         in the disk.
         """
-        if self.__does_index_filename_exist(column_index): raise FileExistsError
-        if self.__is_index_in_indices(column_index): raise KeyError
+        with self.latch:
+            if self.__does_index_filename_exist(column_index): raise FileExistsError
+            if self.__is_index_in_indices(column_index): raise KeyError
 
-        self.indices[column_index] = Index_Column(self.__get_column_index_filename(column_index), self.order)
+            self.indices[column_index] = Index_Column(self.__get_column_index_filename(column_index), self.order)
 
-        # add column index values and their respective RIDs to the new tree
-        num_records:int = Disk.read_from_path_metadata(os.path.dirname(self.index_dir_path))["num_records"]
-        for rid in range(1, num_records+1):
-            rid = RID(rid)
-            # get info of rid's base page
-            base_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{rid.get_page_range_index()}", f"BP{rid.get_base_page_index()}")
-            assert os.path.isdir(base_page_path)
-            tid = BUFFERPOOL.get_indirection_tid(rid, base_page_path)
-            tail_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{tid.get_page_range_index()}", f"TP{tid.get_tail_page_index()}")
-            schema_encoding = BUFFERPOOL.get_schema_encoding(rid, base_page_path)
-            if not schema_encoding[column_index]: entry_val = BUFFERPOOL.get_record_entry(rid, base_page_path, column_index)
-            else:                                 entry_val = BUFFERPOOL.get_record_entry(tid, tail_page_path, column_index)
-            self.indices[column_index].add_value(entry_val, rid)
+            # add column index values and their respective RIDs to the new tree
+            num_records:int = Disk.read_from_path_metadata(os.path.dirname(self.index_dir_path))["num_records"]
+            for rid in range(1, num_records+1):
+                rid = RID(rid)
+                # get info of rid's base page
+                base_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{rid.get_page_range_index()}", f"BP{rid.get_base_page_index()}")
+                assert os.path.isdir(base_page_path)
+                tid = BUFFERPOOL.get_indirection_tid(rid, base_page_path)
+                tail_page_path = os.path.join(os.path.dirname(self.index_dir_path), f"PR{tid.get_page_range_index()}", f"TP{tid.get_tail_page_index()}")
+                schema_encoding = BUFFERPOOL.get_schema_encoding(rid, base_page_path)
+                if not schema_encoding[column_index]: entry_val = BUFFERPOOL.get_record_entry(rid, base_page_path, column_index)
+                else:                                 entry_val = BUFFERPOOL.get_record_entry(tid, tail_page_path, column_index)
+                self.indices[column_index].add_value(entry_val, rid)
 
     def drop_index(self, column_index: int) -> None:
         """
@@ -169,21 +179,22 @@ class Index:
 
         Warning: deletes the data of the column's index from disk.
         """
-        if not self.__does_index_filename_exist(column_index):
-            raise FileNotFoundError
-        if not self.__is_index_in_indices(column_index):
-            raise KeyError
-        if self.__is_index_key(column_index):
-            raise ValueError
-        assert column_index in self.indices
-        del self.indices[column_index]
-        os.remove(self.__get_column_index_filename(column_index))
+        with self.latch:
+            if not self.__does_index_filename_exist(column_index):
+                raise FileNotFoundError
+            if not self.__is_index_in_indices(column_index):
+                raise KeyError
+            if self.__is_index_key(column_index):
+                raise ValueError
+            assert column_index in self.indices
+            del self.indices[column_index]
+            os.remove(self.__get_column_index_filename(column_index))
 
     def insert(self, record_columns:tuple, rid:RID) -> None:
         """
         Adds record information to the created index columns.
         """
-        with self.lock:
+        with self.latch:
             self.__check_num_columns_valid(record_columns)
             for i, record_entry_value in enumerate(record_columns):
                 if i in self.indices:
@@ -193,7 +204,7 @@ class Index:
         """
         Deletes record information from the created index columns.
         """
-        with self.lock:
+        with self.latch:
             self.__check_num_columns_valid(record_columns)
             for i, record_entry_value in enumerate(record_columns):
                 if i in self.indices:
@@ -204,29 +215,27 @@ class Index:
         Returns the location of all records with the given value
         within a specified column.
         """
-        with self.lock:
+        with self.latch:
             if not column_index in self.indices:
                 raise KeyError
-            result = self.indices[column_index].get_single_entry(entry_value)
-        return result
+            return self.indices[column_index].get_single_entry(entry_value)
 
     def locate_range(self, begin, end, column_index: int) -> set[RID]:
         """
         Returns the RIDs of all records with values in a specified column
         between "begin" and "end" (bounds-inclusive).
         """
-        with self.lock:
+        with self.latch:
             if not column_index in self.indices:
                 raise KeyError
-            result = self.indices[column_index].get_ranged_entry(begin, end)
-        return result
+            return self.indices[column_index].get_ranged_entry(begin, end)
 
     def update(
         self, old_entries:tuple, new_entries:tuple, rid: int)->None:
         """
         Updates an RID-associated entry value.
         """
-        with self.lock:
+        with self.latch:
             for i in range(len(new_entries)):
-                if new_entries[i] != None and i in self.indices:
+                if new_entries[i] != None and new_entries[i] != old_entries[i] and i in self.indices:
                     self.indices[i].update_value(old_entries[i], new_entries[i], rid)

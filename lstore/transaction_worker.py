@@ -1,8 +1,6 @@
 from threading import Thread
 
 from lstore.transaction import Transaction
-from lstore.table import Table, Record
-from lstore.index import Index
 
 threads = list()
 
@@ -27,16 +25,13 @@ class TransactionWorker:
         """
         Appends t to transactions
         """
-        print(f"APPENDING TRANSACTION {t.id} IN TW {self.id}")
         self.transactions.append(t)
-        print(f"LIST OF TRANSACTION IDS IN TW {self.id}: {[_.id for _ in self.transactions]}")
 
 
     def run(self):
         """
         Runs all transaction as a thread
         """
-        print(f"RUNNING TRANSACTION WORKER {self.id}")
         thread = Thread(target=self.__run, args=())
         self.thread = thread
         global threads
