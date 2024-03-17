@@ -1,4 +1,5 @@
 import os
+from threading import RLock
 
 from lstore.bufferpool import BUFFERPOOL
 from lstore.disk import Disk
@@ -7,26 +8,30 @@ from lstore.table import Table
 class Database():
 
     def __init__(self)->None:
-        self.tables:dict[str,Table] = dict()
+        self.tables:dict[str,Table] = None
         self.db_path = ""
+
+        self.lock:RLock = RLock()
 
     def __get_tables(self)->tuple[list[str],int]:
         table_dirs = Disk.list_directories_in_path(self.db_path)
         return (table_dirs, len(table_dirs))
 
     def __load_tables(self)->None:
-        table_paths, num_tables = self.__get_tables()
-        for table_path in table_paths:
-            table_name = os.path.basename(table_path)
-            metadata = Disk.read_from_path_metadata(table_path)
-            self.tables[table_name] = Table(
-                metadata["table_path"],
-                metadata["num_columns"],
-                metadata["key_index"],
-                metadata["num_records"]
-            )
+        with self.lock:
+            table_paths, _ = self.__get_tables()
+            for table_path in table_paths:
+                table_name = os.path.basename(table_path)
+                metadata = Disk.read_from_path_metadata(table_path)
+                self.tables[table_name] = Table(
+                    metadata["table_path"],
+                    metadata["num_columns"],
+                    metadata["key_index"],
+                    metadata["num_records"]
+                )
 
     def open(self, path:str)->None:
+        self.tables = dict()
         self.db_path = path
         try:
             Disk.create_path_directory(path)

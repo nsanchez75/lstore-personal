@@ -35,10 +35,10 @@ class TID(RID):
 
 class Record:
 
-    def __init__(self, rid:int, key_index:int, columns:tuple)->None:
+    def __init__(self, rid:int, key_index:int, columns:list)->None:
         self.rid:RID       = RID(rid)
         self.key_index:int = key_index
-        self.columns:tuple = columns
+        self.columns:list = list(columns)
 
     def __str__(self)->str:
         return f"RID {self.rid}: {self.columns}"
@@ -49,7 +49,7 @@ class Record:
     def set_rid(self, new_rid:RID)->None:
         self.rid = new_rid
 
-    def get_columns(self)->tuple:
+    def get_columns(self)->list:
         return self.columns
 
     def get_page_range_index(self)->int:

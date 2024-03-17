@@ -15,7 +15,7 @@ class Bufferpool:
 
     def __init__(self)->None:
         self.frames:dict[str,Frame] = dict()
-        self.lock:RLock             = RLock()
+        self.latch:RLock             = RLock()
 
     def __del__(self)->None:
         del self.frames
@@ -39,10 +39,9 @@ class Bufferpool:
         if not self.__has_capacity():
             self.__evict_frame()
         self.frames[page_path] = Frame(page_path)
-        print("ACCESSING FRAME AT PATH", page_path)
 
     def __access_frame(self, page_path:str)->None:
-        with self.lock:
+        with self.latch:
             if not self.__is_page_in_buffer(page_path):
                 self.__import_frame(page_path)
 
@@ -75,9 +74,14 @@ class Bufferpool:
         self.frames[base_page_path].delete_record(rid)
 
     def commit_writes_to_disk(self)->None:
-        for frame in self.frames.values():
-            if frame.check_if_dirty():
+        with self.latch:
+            for frame in self.frames.values():
                 frame.write_frame_to_disk()
+
+    def abort_writes_to_disk(self)->None:
+        with self.latch:
+            for frame in self.frames.values():
+                frame.keep_original_frame_to_disk()
 
 
 class Frame:
@@ -89,7 +93,7 @@ class Frame:
         self.physical_pages:list[Physical_Page] = list()
         self.last_time_used:datetime            = datetime.now()
 
-        self.lock:RLock                         = RLock()
+        self.latch:RLock                         = RLock()
 
         # find number of columns from table metadata (in grandparent dir from base/tail page)
         self.num_columns:int                        = \
@@ -127,21 +131,16 @@ class Frame:
 
     def __pin_frame_decorator(func):
         def wrapper(self, *args, **kwargs):
-            with self.lock:
-                # print("IN LOCK FOR NUM_PINS += 1")
+            with self.latch:
                 self.num_pins += 1
             result = func(self, *args, **kwargs)
-            with self.lock:
-                # print("IN LOCK FOR NUM_PINS -= 1")
+            with self.latch:
                 self.num_pins -= 1
             return result
         return wrapper
 
     def __set_dirty_bit(self)->None:
         self.is_dirty = True
-
-    def check_if_dirty(self)->bool:
-        return self.is_dirty
 
     def get_last_time_used(self)->datetime:
         return self.last_time_used
@@ -150,6 +149,11 @@ class Frame:
         if self.is_dirty:
             for physical_page in self.physical_pages:
                 physical_page.write_data_to_disk()
+
+    def keep_original_frame_to_disk(self)->None:
+        if self.is_dirty:
+            for physical_page in self.physical_pages:
+                physical_page.keep_original_data_to_disk()
 
     @__pin_frame_decorator
     def insert_record(self, record:Record)->None:
@@ -162,7 +166,6 @@ class Frame:
 
         # write columns to data
         for i, entry_value in enumerate(record.get_columns()):
-            if entry_value == None: continue
             self.physical_pages[i+Config.NUM_METADATA_COLUMNS].write_record_info_to_data(entry_value, rid)
 
         # set frame as dirty
@@ -204,11 +207,16 @@ class Physical_Page:
 
     def __init__(self, physical_page_path:str, data:bytearray)->None:
         assert len(data) == Config.PHYSICAL_PAGE_SIZE
-        self.physical_page_path = physical_page_path
-        self.data:bytearray = data
+        self.physical_page_path:str  = physical_page_path
+        self.data:bytearray          = data
+        self.original_data:bytearray = data
 
     def __get_offset(self, rid:int)->int:
         return (rid - 1) * Config.RECORD_FIELD_SIZE % Config.PHYSICAL_PAGE_SIZE
+
+    def keep_original_data_to_disk(self)->int:
+        with io.open(self.physical_page_path, 'wb') as f:
+            f.write(self.original_data)
 
     def write_data_to_disk(self)->int:
         with io.open(self.physical_page_path, 'wb') as f:
