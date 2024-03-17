@@ -116,12 +116,11 @@ class Page_Range:
             return
         # print("merge is happening")
         # with self.latch:
-            # # copy base pages associated w/ page range
-            # base_pages = deepcopy(self.base_pages)
-            
-            # # determine number of columns
-            # num_columns = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["num_columns"]
-        
+        #     # copy base pages associated w/ page range
+        #     base_pages = deepcopy(self.base_pages)
+
+        #     # determine number of columns
+        #     num_columns:dict = Disk.read_from_path_metadata(os.path.dirname(self.page_range_path))["num_columns"]
 
     def insert_record(self, record:Record)->None:
         """
@@ -132,16 +131,19 @@ class Page_Range:
 
     def get_record_columns(self, rid:RID, rollback_version:int)->tuple:
         columns = list()
+        # print(f"GETTING COLUMNS FOR RID {rid} WITH {abs(rollback_version)} ROLLBACKS")
         tid = self.base_pages[rid.get_base_page_index()].get_indirection_tid(rid)
         schema_encoding = self.base_pages[rid.get_base_page_index()].get_schema_encoding(rid)
-        while rollback_version < 0:
+        while rollback_version < 0 and int(tid) != -1:
             tid = self.tail_pages[tid.get_tail_page_index()].get_indirection_tid(tid)
             rollback_version += 1
+        # print(f"ACCESSING TID {tid}")
         for i, bit in enumerate(schema_encoding):
             if not bit or int(tid) == -1:
                 columns.append(self.base_pages[rid.get_base_page_index()].select_record(rid, i))
             else:
                 columns.append(self.tail_pages[tid.get_tail_page_index()].select_record(tid, i))
+        # print(f"RID {rid} HAS COLUMNS {columns}")
         return tuple(columns)
 
     def update_record(self, rid:RID, old_columns:tuple, new_columns:tuple)->None:
@@ -174,6 +176,8 @@ class Page_Range:
         self.base_pages[rid.get_base_page_index()].set_indirection_tid(rid, new_tid)
         if not int(tid) == -1:
             self.tail_pages[new_tid.get_tail_page_index()].set_indirection_tid(new_tid, tid)
+
+        # print(f"UPDATED COLUMNS FOR RID {rid} TO {old_columns}")
 
         # perform merging if necessary
         # self.__merge()

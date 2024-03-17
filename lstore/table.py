@@ -1,4 +1,5 @@
 import os
+from copy import deepcopy
 from threading import RLock
 
 from lstore.disk import Disk
@@ -106,7 +107,7 @@ class Table:
             # key already exists in table
             if len(self.index.locate(columns[self.key_index], self.key_index)): raise Exception
         except Exception:
-            return False        
+            return False
         else:
             # create record
             record = Record(rid, self.key_index, columns)
@@ -154,7 +155,7 @@ class Table:
 
     def sum_records(self, start_range, end_range, aggregate_column_index:int, rollback_version:int=0)->int:
         rsum = 0
-        
+
         # get RIDs
         try:
             rids = self.index.locate_range(start_range, end_range, self.key_index)
@@ -189,14 +190,22 @@ class Table:
         # perform checks that may abort the operation
         try:
             # get old columns associated to RID
-            old_columns = self.__get_columns(rid)
+            old_columns = deepcopy(self.__get_columns(rid))
             if len(old_columns) != len(new_columns): raise Exception
+
+            # only update if the new columns are changing values in the record
+            is_update_necessary = False
+            for i in range(len(new_columns)):
+                if new_columns[i] != None and new_columns[i] != old_columns[i]:
+                    is_update_necessary = True
+            if not is_update_necessary: return True
         except Exception:
             return False
         else:
             # update entry values associated to RID in index
             self.index.update(old_columns, new_columns, rid)
             # update record in disk
+            # print(f"UPDATING KEY {primary_key} OF RID {rid} AND ORIGINAL COLUMNS {old_columns} WITH NEW COLUMNS {new_columns}")
             self.__access_page_range(rid.get_page_range_index())
             self.page_ranges[rid.get_page_range_index()].update_record(rid, old_columns, new_columns)
             return True
