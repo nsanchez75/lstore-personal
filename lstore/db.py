@@ -46,10 +46,6 @@ class Database():
         del self.tables
         self.tables = None
 
-        # delete bufferpool
-        global BUFFERPOOL
-        del BUFFERPOOL
-
     def create_table(self, name:str, num_columns:int, key_index:int)->Table:
         """
         Create new table.
